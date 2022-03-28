@@ -3,6 +3,7 @@ package droidninja.filepicker.fragments
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.*
 import android.widget.TextView
@@ -27,10 +28,12 @@ import droidninja.filepicker.viewmodels.VMMediaPicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import pub.devrel.easypermissions.AfterPermissionGranted
+import pub.devrel.easypermissions.EasyPermissions
 import java.io.IOException
 
 
-class MediaDetailPickerFragment : BaseFragment(), FileAdapterListener {
+class MediaDetailPickerFragment : BaseFragment(), FileAdapterListener,EasyPermissions.PermissionCallbacks {
     lateinit var recyclerView: RecyclerView
 
     lateinit var emptyView: TextView
@@ -136,6 +139,44 @@ class MediaDetailPickerFragment : BaseFragment(), FileAdapterListener {
         viewModel.getMedia(mediaType = fileType, imageFileSize = imageFileSize, videoFileSize = videoFileSize)
     }
 
+    @AfterPermissionGranted(REQUEST_CODE_R_CAMEAR)
+    private fun methodRequiresTwoPermission() {
+        if (EasyPermissions.hasPermissions(
+                requireContext(),
+                *FilePickerConst.PERMISSIONS_FILE_PICKER_R
+            )
+        ) {
+            // Already have permission, do the thing
+            onCameraClicked()
+        } else {
+            // Do not have permissions, request them now
+            EasyPermissions.requestPermissions(
+                this,
+                getString(R.string.permission_filepicker_rationale_camera),
+                REQUEST_CODE_R_CAMEAR,
+                *FilePickerConst.PERMISSIONS_FILE_PICKER_R
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Forward results to EasyPermissions
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+        //TODO
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        //TODO
+    }
+
     private fun updateList(medias: List<Media>) {
         view?.let { _ ->
             if (medias.isNotEmpty()) {
@@ -151,20 +192,32 @@ class MediaDetailPickerFragment : BaseFragment(), FileAdapterListener {
                     photoGridAdapter = PhotoGridAdapter(it, mGlideRequestManager, medias, PickerManager.selectedPhotos, fileType == FilePickerConst.MEDIA_TYPE_IMAGE && PickerManager.isEnableCamera, this)
                     recyclerView.adapter = photoGridAdapter
                     photoGridAdapter?.setCameraListener(View.OnClickListener {
-                        try {
-                            uiScope.launch {
-                                val intent = withContext(Dispatchers.IO) { imageCaptureManager?.dispatchTakePictureIntent() }
-                                if (intent != null)
-                                    startActivityForResult(intent, ImageCaptureManager.REQUEST_TAKE_PHOTO)
-                                else
-                                    Toast.makeText(activity, R.string.no_camera_exists, Toast.LENGTH_SHORT).show()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            // TODO check camera permission
+                            if (!EasyPermissions.hasPermissions(requireContext(), *FilePickerConst.PERMISSIONS_FILE_PICKER_R)) {
+                                EasyPermissions.requestPermissions(this, getString(R.string.permission_filepicker_rationale_camera),
+                                    REQUEST_CODE_R_CAMEAR, *FilePickerConst.PERMISSIONS_FILE_PICKER_R)
+                                return@OnClickListener
                             }
-                        } catch (e: IOException) {
-                            e.printStackTrace()
                         }
+                        onCameraClicked()
                     })
                 }
             }
+        }
+    }
+
+    private fun onCameraClicked() {
+        try {
+            uiScope.launch {
+                val intent = withContext(Dispatchers.IO) { imageCaptureManager?.dispatchTakePictureIntent() }
+                if (intent != null)
+                    startActivityForResult(intent, ImageCaptureManager.REQUEST_TAKE_PHOTO)
+                else
+                    Toast.makeText(activity, R.string.no_camera_exists, Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
     }
 
@@ -242,5 +295,7 @@ class MediaDetailPickerFragment : BaseFragment(), FileAdapterListener {
             mediaDetailPickerFragment.arguments = bun
             return mediaDetailPickerFragment
         }
+
+        private const val REQUEST_CODE_R_CAMEAR = 159
     }
 }// Required empty public constructor
