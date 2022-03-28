@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
 
+    <!--    Android 11系统权限收紧，第三方APP仅支持调用原生相机-->
+    <permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
     <application
         android:name=".AppDelegate"
         android:allowBackup="true"
