@@ -9,6 +9,7 @@
     <string name="done">Done</string>
 
     <string name="permission_filepicker_rationale">Storage permission is needed to access files.</string>
+    <string name="permission_filepicker_rationale_camera">Camera permission is needed to access files.</string>
     <string name="no_files_found">No Files Found</string>
     <string name="attachments_title_text" formatted="false">(%d/%d)</string>
     <string name="attachments_num" formatted="false">%d</string>

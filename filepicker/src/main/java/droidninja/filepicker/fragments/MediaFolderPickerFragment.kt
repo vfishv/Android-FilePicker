@@ -3,10 +3,8 @@ package droidninja.filepicker.fragments
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
-import androidx.recyclerview.widget.DefaultItemAnimator
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +12,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.DefaultItemAnimator
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestManager
 import droidninja.filepicker.FilePickerConst
@@ -29,9 +30,12 @@ import droidninja.filepicker.viewmodels.VMMediaPicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import pub.devrel.easypermissions.AfterPermissionGranted
+import pub.devrel.easypermissions.EasyPermissions
 import java.io.IOException
 
-class MediaFolderPickerFragment : BaseFragment(), FolderGridAdapter.FolderGridAdapterListener {
+
+class MediaFolderPickerFragment : BaseFragment(), FolderGridAdapter.FolderGridAdapterListener,EasyPermissions.PermissionCallbacks {// Required empty public constructor
     lateinit var recyclerView: RecyclerView
 
     lateinit var emptyView: TextView
@@ -148,7 +152,53 @@ class MediaFolderPickerFragment : BaseFragment(), FolderGridAdapter.FolderGridAd
         }
     }
 
+    @AfterPermissionGranted(REQUEST_CODE_R_CAMEAR)
+    private fun methodRequiresTwoPermission() {
+        if (EasyPermissions.hasPermissions(
+                requireContext(),
+                *FilePickerConst.PERMISSIONS_FILE_PICKER_R
+            )
+        ) {
+            // Already have permission, do the thing
+            onCameraClicked()
+        } else {
+            // Do not have permissions, request them now
+            EasyPermissions.requestPermissions(
+                this,
+                getString(R.string.permission_filepicker_rationale_camera),
+                REQUEST_CODE_R_CAMEAR,
+                *FilePickerConst.PERMISSIONS_FILE_PICKER_R
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Forward results to EasyPermissions
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this)
+    }
+
+    override fun onPermissionsGranted(requestCode: Int, perms: MutableList<String>) {
+        //TODO
+    }
+
+    override fun onPermissionsDenied(requestCode: Int, perms: MutableList<String>) {
+        //TODO
+    }
+
     override fun onCameraClicked() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // TODO check camera permission
+            if (!EasyPermissions.hasPermissions(requireContext(), *FilePickerConst.PERMISSIONS_FILE_PICKER_R)) {
+                EasyPermissions.requestPermissions(this, getString(R.string.permission_filepicker_rationale_camera),
+                    REQUEST_CODE_R_CAMEAR, *FilePickerConst.PERMISSIONS_FILE_PICKER_R)
+                return
+            }
+        }
         try {
             uiScope.launch {
                 val intent = withContext(Dispatchers.IO) { imageCaptureManager?.dispatchTakePictureIntent() }
@@ -217,5 +267,8 @@ class MediaFolderPickerFragment : BaseFragment(), FolderGridAdapter.FolderGridAd
             photoPickerFragment.arguments = bun
             return photoPickerFragment
         }
+
+        private const val REQUEST_CODE_R_CAMEAR = 159
     }
-}// Required empty public constructor
+
+}

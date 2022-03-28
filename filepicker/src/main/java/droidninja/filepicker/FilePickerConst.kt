@@ -39,6 +39,7 @@ object FilePickerConst {
     const val MEDIA_TYPE_VIDEO = 3
 
     const val PERMISSIONS_FILE_PICKER = Manifest.permission.READ_EXTERNAL_STORAGE
+    val PERMISSIONS_FILE_PICKER_R = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA)
 
     val docExtensions = arrayOf("ppt", "pptx", "xls", "xlsx", "doc", "docx", "dot", "dotx")
 
